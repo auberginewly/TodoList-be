@@ -150,6 +150,7 @@ public class GlobalExceptionHandler {
             Exception ex, WebRequest request) {
         
         log.error("未处理的异常: ", ex);
+        ex.printStackTrace(); // 添加异常堆栈打印
         
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

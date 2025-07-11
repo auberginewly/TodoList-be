@@ -17,11 +17,12 @@ import java.util.List;
  * 处理 /api/todos 相关的 CRUD 请求，所有方法都需要认证
  */
 @RestController
-@RequestMapping("/api/todos")
+@RequestMapping("/todos")
 @RequiredArgsConstructor
 public class TodoController {
 
     private final TodoService todoService;
+    private final site.auberginewly.todolist.service.AuthService authService;
 
     /**
      * 创建待办事项
@@ -100,13 +101,18 @@ public class TodoController {
         return ResponseEntity.ok(overdue);
     }
 
-    // TODO: 实际项目应通过 SecurityContext 获取用户ID，这里仅做演示
+    /**
+     * 从 Principal 中获取用户ID
+     * 通过用户名查找用户来获取用户ID
+     */
     private Long getUserIdFromPrincipal(Principal principal) {
-        // 假设用户名就是用户ID的字符串形式
-        try {
-            return Long.parseLong(principal.getName());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("无法获取用户ID");
+        if (principal == null || principal.getName() == null) {
+            throw new IllegalArgumentException("用户未登录");
         }
+        
+        // 通过用户名查找用户，获取用户ID
+        return authService.getUserByUsername(principal.getName())
+                .orElseThrow(() -> new IllegalArgumentException("用户不存在"))
+                .getId();
     }
 } 

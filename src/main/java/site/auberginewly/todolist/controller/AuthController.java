@@ -20,7 +20,7 @@ import java.util.Map;
  * 处理注册、登录、修改密码、获取当前用户信息等接口
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
