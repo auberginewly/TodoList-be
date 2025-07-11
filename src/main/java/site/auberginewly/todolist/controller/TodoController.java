@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import site.auberginewly.todolist.entity.Todo;
 import site.auberginewly.todolist.service.TodoService;
+import site.auberginewly.todolist.exception.ApiResponse;
+import site.auberginewly.todolist.dto.TodoRequest;
 
 import java.security.Principal;
 import java.util.List;
@@ -28,77 +30,63 @@ public class TodoController {
      * 创建待办事项
      */
     @PostMapping
-    public ResponseEntity<?> createTodo(@RequestBody Todo todo, Principal principal) {
-        // 实际项目应通过 SecurityContext 获取用户ID，这里用用户名模拟
-        Long userId = getUserIdFromPrincipal(principal);
-        Todo created = todoService.createTodo(todo, userId);
-        return ResponseEntity.ok(created);
+    public ApiResponse<Todo> createTodo(@RequestBody TodoRequest request, Principal principal) {
+        Todo todo = todoService.createTodo(request, getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "创建成功", todo);
     }
 
     /**
      * 获取当前用户所有待办事项（支持分页、筛选、搜索）
      */
     @GetMapping
-    public ResponseEntity<?> getTodos(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "all") String status,
-            @RequestParam(required = false) String search,
-            Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Todo> todos = todoService.getTodosByUserId(userId, status, search, pageable);
-        return ResponseEntity.ok(todos);
+    public ApiResponse<List<Todo>> getTodos(Principal principal) {
+        List<Todo> todos = todoService.getTodos(getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "获取成功", todos);
     }
 
     /**
      * 获取单个待办事项
      */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getTodoById(@PathVariable Long id, Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        Todo todo = todoService.getTodoByIdAndUserId(id, userId);
-        return ResponseEntity.ok(todo);
+    public ApiResponse<Todo> getTodo(@PathVariable Long id, Principal principal) {
+        Todo todo = todoService.getTodo(id, getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "获取成功", todo);
     }
 
     /**
      * 更新待办事项
      */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateTodo(@PathVariable Long id, @RequestBody Todo todo, Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        Todo updated = todoService.updateTodo(id, todo, userId);
-        return ResponseEntity.ok(updated);
+    public ApiResponse<Todo> updateTodo(@PathVariable Long id, @RequestBody TodoRequest request, Principal principal) {
+        Todo todo = todoService.updateTodo(id, request, getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "更新成功", todo);
     }
 
     /**
      * 删除待办事项
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteTodo(@PathVariable Long id, Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        todoService.deleteTodo(id, userId);
-        return ResponseEntity.ok().build();
+    public ApiResponse<Void> deleteTodo(@PathVariable Long id, Principal principal) {
+        todoService.deleteTodo(id, getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "删除成功", null);
     }
 
     /**
      * 切换待办事项完成状态
      */
     @PostMapping("/{id}/toggle")
-    public ResponseEntity<?> toggleTodoStatus(@PathVariable Long id, Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        Todo updated = todoService.toggleTodoStatus(id, userId);
-        return ResponseEntity.ok(updated);
+    public ApiResponse<Todo> toggleTodo(@PathVariable Long id, Principal principal) {
+        Todo todo = todoService.toggleTodo(id, getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "切换完成状态成功", todo);
     }
 
     /**
      * 获取已过期待办事项
      */
     @GetMapping("/overdue")
-    public ResponseEntity<?> getOverdueTodos(Principal principal) {
-        Long userId = getUserIdFromPrincipal(principal);
-        List<Todo> overdue = todoService.getOverdueTodos(userId);
-        return ResponseEntity.ok(overdue);
+    public ApiResponse<List<Todo>> getOverdueTodos(Principal principal) {
+        List<Todo> todos = todoService.getOverdueTodos(getUserIdFromPrincipal(principal));
+        return new ApiResponse<>(200, "获取成功", todos);
     }
 
     /**

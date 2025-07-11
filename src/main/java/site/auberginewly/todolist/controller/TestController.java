@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import site.auberginewly.todolist.exception.ApiResponse;
 
 /**
  * 测试控制器
@@ -22,13 +23,8 @@ public class TestController {
      * @return 应用状态信息
      */
     @GetMapping("/health")
-    public Map<String, Object> health() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("message", "TodoList 后端应用运行正常");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("version", "1.0.0");
-        return response;
+    public ApiResponse<String> health() {
+        return new ApiResponse<>(200, "服务正常", "OK");
     }
 
     /**

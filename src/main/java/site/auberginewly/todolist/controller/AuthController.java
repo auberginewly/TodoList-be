@@ -1,5 +1,6 @@
 package site.auberginewly.todolist.controller;
 
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,6 +11,11 @@ import org.springframework.web.bind.annotation.*;
 import site.auberginewly.todolist.entity.User;
 import site.auberginewly.todolist.security.JwtTokenProvider;
 import site.auberginewly.todolist.service.AuthService;
+import site.auberginewly.todolist.exception.ApiResponse;
+import site.auberginewly.todolist.dto.RegisterRequest;
+import site.auberginewly.todolist.dto.LoginRequest;
+import site.auberginewly.todolist.dto.ChangePasswordRequest;
+import site.auberginewly.todolist.dto.UserResponse;
 
 import java.security.Principal;
 import java.util.HashMap;
@@ -30,15 +36,13 @@ public class AuthController {
 
     /**
      * 用户注册
-     * @param body 包含 username 和 password
+     * @param request 注册请求
      * @return 注册成功的用户信息
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        User user = authService.registerUser(username, password);
-        return ResponseEntity.ok(user);
+    public ApiResponse<User> register(@RequestBody RegisterRequest request) {
+        User user = authService.register(request);
+        return new ApiResponse<>(200, "注册成功", user);
     }
 
     /**
@@ -47,29 +51,16 @@ public class AuthController {
      * @return 登录成功的 JWT Token
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        
-        try {
-            // 使用 Spring Security 进行认证
-            Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(username, password)
-            );
-            
-            // 生成 JWT Token
-            String token = tokenProvider.generateToken(authentication);
-            
-            // 返回 Token
-            Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
-            response.put("type", "Bearer");
-            response.put("username", username);
-            
-            return ResponseEntity.ok(response);
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(401).body("用户名或密码错误");
-        }
+    public ApiResponse<Map<String, String>> login(@RequestBody LoginRequest request) {
+        User user = authService.login(request);
+        // 创建认证对象
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+            user.getUsername(), null, null);
+        // 生成JWT token
+        String token = tokenProvider.generateToken(authentication);
+        Map<String, String> data = new HashMap<>();
+        data.put("token", token);
+        return new ApiResponse<>(200, "登录成功", data);
     }
 
     /**
@@ -79,13 +70,9 @@ public class AuthController {
      * @return 修改后的用户信息
      */
     @PutMapping("/password")
-    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> body, Principal principal) {
-        String oldPassword = body.get("oldPassword");
-        String newPassword = body.get("newPassword");
-        // principal.getName() 通常为用户名，实际项目应通过 SecurityContext 获取用户ID
-        User user = authService.getUserByUsername(principal.getName()).orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        User updated = authService.changePassword(user.getId(), oldPassword, newPassword);
-        return ResponseEntity.ok(updated);
+    public ApiResponse<Void> changePassword(@RequestBody ChangePasswordRequest request, Principal principal) {
+        authService.changePassword(request, principal);
+        return new ApiResponse<>(200, "密码修改成功", null);
     }
 
     /**
@@ -94,8 +81,8 @@ public class AuthController {
      * @return 用户信息
      */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(Principal principal) {
-        User user = authService.getUserByUsername(principal.getName()).orElseThrow(() -> new IllegalArgumentException("用户不存在"));
-        return ResponseEntity.ok(user);
+    public ApiResponse<User> getCurrentUser(Principal principal) {
+        User user = authService.getCurrentUser(principal);
+        return new ApiResponse<>(200, "获取成功", user);
     }
 } 

@@ -4,9 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import site.auberginewly.todolist.dto.ChangePasswordRequest;
+import site.auberginewly.todolist.dto.LoginRequest;
+import site.auberginewly.todolist.dto.RegisterRequest;
 import site.auberginewly.todolist.entity.User;
 import site.auberginewly.todolist.repository.UserRepository;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -24,32 +28,31 @@ public class AuthService {
     /**
      * 用户注册
      * 
-     * @param username 用户名
-     * @param password 原始密码
+     * @param request 注册请求DTO
      * @return 注册成功的用户信息
      * @throws IllegalArgumentException 如果用户名已存在或参数无效
      */
-    public User registerUser(String username, String password) {
+    public User register(RegisterRequest request) {
         // 参数验证
-        if (username == null || username.trim().isEmpty()) {
+        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
             throw new IllegalArgumentException("用户名不能为空");
         }
-        if (password == null || password.trim().isEmpty()) {
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             throw new IllegalArgumentException("密码不能为空");
         }
-        if (password.length() < 6) {
+        if (request.getPassword().length() < 6) {
             throw new IllegalArgumentException("密码长度不能少于6位");
         }
 
         // 检查用户名是否已存在
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("用户名已存在");
         }
 
         // 创建新用户
         User user = new User();
-        user.setUsername(username.trim());
-        user.setPassword(passwordEncoder.encode(password)); // 加密密码
+        user.setUsername(request.getUsername().trim());
+        user.setPassword(passwordEncoder.encode(request.getPassword())); // 加密密码
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
 
@@ -60,22 +63,21 @@ public class AuthService {
     /**
      * 用户登录
      * 
-     * @param username 用户名
-     * @param password 原始密码
+     * @param request 登录请求DTO
      * @return 登录成功的用户信息
      * @throws BadCredentialsException 如果用户名或密码错误
      */
-    public User loginUser(String username, String password) {
+    public User login(LoginRequest request) {
         // 参数验证
-        if (username == null || username.trim().isEmpty()) {
+        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
             throw new IllegalArgumentException("用户名不能为空");
         }
-        if (password == null || password.trim().isEmpty()) {
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
             throw new IllegalArgumentException("密码不能为空");
         }
 
         // 查找用户
-        Optional<User> userOptional = userRepository.findByUsername(username.trim());
+        Optional<User> userOptional = userRepository.findByUsername(request.getUsername().trim());
         if (userOptional.isEmpty()) {
             throw new BadCredentialsException("用户名或密码错误");
         }
@@ -83,7 +85,7 @@ public class AuthService {
         User user = userOptional.get();
 
         // 验证密码
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("用户名或密码错误");
         }
 
@@ -93,24 +95,23 @@ public class AuthService {
     /**
      * 修改密码
      * 
-     * @param userId 用户ID
-     * @param oldPassword 旧密码
-     * @param newPassword 新密码
-     * @return 更新后的用户信息
+     * @param request 修改密码请求DTO
+     * @param principal 当前用户主体
      * @throws BadCredentialsException 如果旧密码错误
      * @throws IllegalArgumentException 如果新密码无效
      */
-    public User changePassword(Long userId, String oldPassword, String newPassword) {
+    public void changePassword(ChangePasswordRequest request, Principal principal) {
         // 参数验证
-        if (newPassword == null || newPassword.trim().isEmpty()) {
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
             throw new IllegalArgumentException("新密码不能为空");
         }
-        if (newPassword.length() < 6) {
+        if (request.getNewPassword().length() < 6) {
             throw new IllegalArgumentException("新密码长度不能少于6位");
         }
 
-        // 查找用户
-        Optional<User> userOptional = userRepository.findById(userId);
+        // 从principal获取用户名
+        String username = principal.getName();
+        Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isEmpty()) {
             throw new IllegalArgumentException("用户不存在");
         }
@@ -118,26 +119,27 @@ public class AuthService {
         User user = userOptional.get();
 
         // 验证旧密码
-        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new BadCredentialsException("旧密码错误");
         }
 
         // 更新密码
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
 
-        return userRepository.save(user);
+        userRepository.save(user);
     }
 
     /**
-     * 根据用户ID获取用户信息
+     * 获取当前用户信息
      * 
-     * @param userId 用户ID
+     * @param principal 当前用户主体
      * @return 用户信息
      * @throws IllegalArgumentException 如果用户不存在
      */
-    public User getUserById(Long userId) {
-        Optional<User> userOptional = userRepository.findById(userId);
+    public User getCurrentUser(Principal principal) {
+        String username = principal.getName();
+        Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isEmpty()) {
             throw new IllegalArgumentException("用户不存在");
         }

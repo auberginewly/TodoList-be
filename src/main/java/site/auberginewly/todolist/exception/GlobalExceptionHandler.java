@@ -12,6 +12,7 @@ import org.springframework.web.context.request.WebRequest;
 
 import java.util.HashMap;
 import java.util.Map;
+import site.auberginewly.todolist.exception.ApiResponse;
 
 /**
  * 全局异常处理器
@@ -146,19 +147,10 @@ public class GlobalExceptionHandler {
      * 处理所有其他未处理的异常
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(
-            Exception ex, WebRequest request) {
-        
+    public ResponseEntity<ApiResponse<Object>> handleGlobalException(Exception ex, WebRequest request) {
         log.error("未处理的异常: ", ex);
-        ex.printStackTrace(); // 添加异常堆栈打印
-        
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "Internal Server Error",
-                "服务器内部错误，请稍后重试",
-                request.getDescription(false)
-        );
-        
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        ex.printStackTrace();
+        ApiResponse<Object> resp = new ApiResponse<>(500, "服务器内部错误，请稍后重试", null);
+        return new ResponseEntity<>(resp, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 } 

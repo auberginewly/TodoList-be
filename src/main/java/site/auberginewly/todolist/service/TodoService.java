@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import site.auberginewly.todolist.dto.TodoRequest;
 import site.auberginewly.todolist.entity.Todo;
 import site.auberginewly.todolist.repository.TodoRepository;
 
@@ -24,24 +25,29 @@ public class TodoService {
     /**
      * 创建待办事项
      * 
-     * @param todo 待办事项信息
+     * @param request 待办事项请求DTO
      * @param userId 用户ID
      * @return 创建成功的待办事项
      * @throws IllegalArgumentException 如果参数无效
      */
-    public Todo createTodo(Todo todo, Long userId) {
+    public Todo createTodo(TodoRequest request, Long userId) {
         // 参数验证
-        if (todo == null) {
+        if (request == null) {
             throw new IllegalArgumentException("待办事项不能为空");
         }
-        if (todo.getTitle() == null || todo.getTitle().trim().isEmpty()) {
+        if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
             throw new IllegalArgumentException("标题不能为空");
         }
         if (userId == null) {
             throw new IllegalArgumentException("用户ID不能为空");
         }
 
-        // 设置用户ID，确保用户只能创建自己的待办事项
+        // 创建待办事项
+        Todo todo = new Todo();
+        todo.setTitle(request.getTitle().trim());
+        todo.setDescription(request.getDescription());
+        todo.setPriority(Todo.Priority.valueOf(request.getPriority()));
+        todo.setDueDate(request.getDueDate());
         todo.setUserId(userId);
         todo.setCompleted(false); // 新创建的待办事项默认为未完成
 
@@ -84,7 +90,7 @@ public class TodoService {
      * @param userId 用户ID
      * @return 待办事项列表
      */
-    public List<Todo> getAllTodosByUserId(Long userId) {
+    public List<Todo> getTodos(Long userId) {
         if (userId == null) {
             throw new IllegalArgumentException("用户ID不能为空");
         }
@@ -99,7 +105,7 @@ public class TodoService {
      * @return 待办事项信息
      * @throws IllegalArgumentException 如果待办事项不存在或不属于该用户
      */
-    public Todo getTodoByIdAndUserId(Long todoId, Long userId) {
+    public Todo getTodo(Long todoId, Long userId) {
         if (todoId == null) {
             throw new IllegalArgumentException("待办事项ID不能为空");
         }
@@ -124,16 +130,16 @@ public class TodoService {
      * 更新待办事项
      * 
      * @param todoId 待办事项ID
-     * @param todoDetails 更新的待办事项信息
+     * @param request 更新的待办事项请求DTO
      * @param userId 用户ID
      * @return 更新后的待办事项
      * @throws IllegalArgumentException 如果待办事项不存在或不属于该用户
      */
-    public Todo updateTodo(Long todoId, Todo todoDetails, Long userId) {
+    public Todo updateTodo(Long todoId, TodoRequest request, Long userId) {
         if (todoId == null) {
             throw new IllegalArgumentException("待办事项ID不能为空");
         }
-        if (todoDetails == null) {
+        if (request == null) {
             throw new IllegalArgumentException("更新信息不能为空");
         }
         if (userId == null) {
@@ -141,23 +147,20 @@ public class TodoService {
         }
 
         // 获取现有的待办事项
-        Todo existingTodo = getTodoByIdAndUserId(todoId, userId);
+        Todo existingTodo = getTodo(todoId, userId);
 
         // 更新字段（只更新非空字段）
-        if (todoDetails.getTitle() != null && !todoDetails.getTitle().trim().isEmpty()) {
-            existingTodo.setTitle(todoDetails.getTitle().trim());
+        if (request.getTitle() != null && !request.getTitle().trim().isEmpty()) {
+            existingTodo.setTitle(request.getTitle().trim());
         }
-        if (todoDetails.getDescription() != null) {
-            existingTodo.setDescription(todoDetails.getDescription().trim());
+        if (request.getDescription() != null) {
+            existingTodo.setDescription(request.getDescription().trim());
         }
-        if (todoDetails.getCompleted() != null) {
-            existingTodo.setCompleted(todoDetails.getCompleted());
+        if (request.getPriority() != null) {
+            existingTodo.setPriority(Todo.Priority.valueOf(request.getPriority()));
         }
-        if (todoDetails.getPriority() != null) {
-            existingTodo.setPriority(todoDetails.getPriority());
-        }
-        if (todoDetails.getDueDate() != null) {
-            existingTodo.setDueDate(todoDetails.getDueDate());
+        if (request.getDueDate() != null) {
+            existingTodo.setDueDate(request.getDueDate());
         }
 
         return todoRepository.save(existingTodo);
@@ -179,7 +182,7 @@ public class TodoService {
         }
 
         // 验证待办事项是否存在且属于该用户
-        getTodoByIdAndUserId(todoId, userId);
+        getTodo(todoId, userId);
 
         todoRepository.deleteById(todoId);
     }
@@ -191,8 +194,8 @@ public class TodoService {
      * @param userId 用户ID
      * @return 更新后的待办事项
      */
-    public Todo toggleTodoStatus(Long todoId, Long userId) {
-        Todo todo = getTodoByIdAndUserId(todoId, userId);
+    public Todo toggleTodo(Long todoId, Long userId) {
+        Todo todo = getTodo(todoId, userId);
         todo.setCompleted(!todo.getCompleted());
         return todoRepository.save(todo);
     }
